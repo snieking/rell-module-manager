@@ -1,0 +1,13 @@
+entity lib {
+  key name;
+  signer: pubkey;
+}
+
+entity release {
+  key lib, version: name;
+  data: byte_array;
+}
+
+entity dependency {
+  key release, depends_on: release;
+}

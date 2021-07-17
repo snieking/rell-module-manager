@@ -1,0 +1,10 @@
+query download_module(name, version: name): byte_array {
+  return release @ { .lib.name == name, version } ( .data );
+}
+
+query get_dependencies_of_module(name, version: name) {
+  return dependency @* { .release == release @ { .lib.name == name, version }} (
+    name = .depends_on.lib.name,
+    version = .depends_on.version
+  );
+}

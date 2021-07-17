@@ -1,0 +1,27 @@
+operation create_module(name, pubkey) {
+  require(op_context.is_signer(pubkey));
+  create lib(name, pubkey);
+}
+
+// Expects data in format:
+// name = module_name:version (ex. ft3-lib:0.0.1)
+// dependencies = [ module_name:version, ... ] (ex. [ "ft3-lib:0.0.1" ])
+// data = zip file of the module
+operation publish_release(name, dependencies: list<name>, data: byte_array) {
+  val definitions = name.split(":");
+  
+  val lib = lib @ { .name == definitions[0] };
+  require(op_context.is_signer(lib.signer));
+  
+  val depends_on_releases = list<release>();
+  for (dep in dependencies) {
+    val dep_definitions = dep.split(":");
+    depends_on_releases.add(release @ { .lib.name == dep_definitions[0], .version == dep_definitions[1] });
+  }
+  
+  val release = create release(lib, definitions[1], data);
+  
+  for (dep_release in depends_on_releases) {
+    create dependency(release, depends_on = dep_release);
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "rell-module-manager",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "rell:tests": "docker run -v $PWD/rell:/usr/src/rell snieking/postchain:latest test"
+  },
+  "author": "",
+  "license": "ISC"
+}

@@ -1,0 +1,8 @@
+function test_able_to_create_release() {  
+  rell.test
+    .tx()
+    .op(core.create_module("ft3-lib", alice_keypair().pub))
+    .op(core.publish_release("ft3-lib:0.0.1", list<name>(), byte_array.from_hex("FF")))
+    .sign(alice_keypair())
+    .run();
+}
