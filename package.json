@@ -1,11 +1,33 @@
 {
   "name": "rell-module-manager",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dev": "ts-node src/index.ts",
+    "rell:start": "docker run --name rmm -v $PWD/rell:/usr/src/rell -p 7741:7740 -d snieking/postchain:latest",
+    "rell:stop": "docker stop rmm && docker rm rmm",
+    "rell:update": "docker exec -i rmm update",
     "rell:tests": "docker run -v $PWD/rell:/usr/src/rell snieking/postchain:latest test"
   },
+  "bin": {
+    "rmm": "dist/index.js"
+  },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "@types/archiver": "^5.1.1",
+    "@types/extract-zip": "^2.0.1",
+    "@types/node": "^16.3.3",
+    "@types/yargs": "^17.0.2",
+    "ts-node": "^10.1.0",
+    "typescript": "^4.3.5"
+  },
+  "dependencies": {
+    "archiver": "^5.3.0",
+    "extract-zip": "^2.0.1",
+    "node-stream-zip": "^1.13.6",
+    "simple-postchain": "^0.0.4",
+    "yargs": "^17.0.1"
+  }
 }

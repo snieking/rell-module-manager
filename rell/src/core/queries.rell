@@ -1,5 +1,6 @@
-query download_module(name, version: name): byte_array {
-  return release @ { .lib.name == name, version } ( .data );
+query download_module(name, version: name): text {
+  val data = release @ { .lib.name == name, version } ( .data );
+  return data.to_hex();
 }
 
 query get_dependencies_of_module(name, version: name) {

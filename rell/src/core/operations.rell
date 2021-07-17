@@ -13,6 +13,8 @@ operation publish_release(name, dependencies: list<name>, data: byte_array) {
   val lib = lib @ { .name == definitions[0] };
   require(op_context.is_signer(lib.signer));
   
+  log(definitions[0], "has data", data.to_hex());
+  
   val depends_on_releases = list<release>();
   for (dep in dependencies) {
     val dep_definitions = dep.split(":");

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<dict>
+    <entry key="blockstrategy">
+        <dict>
+            <entry key="name">
+                <string>net.postchain.base.BaseBlockBuildingStrategy</string>
+            </entry>
+        </dict>
+    </entry>
+    <entry key="configurationfactory">
+        <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
+    </entry>
+    <entry key="gtx">
+        <dict>
+            <entry key="modules">
+                <array>
+                    <string>net.postchain.rell.module.RellPostchainModuleFactory</string>
+                    <string>net.postchain.gtx.StandardOpsGTXModule</string>
+                </array>
+            </entry>
+            <entry key="rell">
+                <dict>
+                    <entry key="modules">
+                        <array>
+                            <string></string>
+                        </array>
+                    </entry>
+                    <entry key="sources">
+                        <dict>
+                            <entry key="core/entities.rell">
+                                <string>entity lib {
+  key name;
+  signer: pubkey;
+}
+
+entity release {
+  key lib, version: name;
+  data: byte_array;
+}
+
+entity dependency {
+  key release, depends_on: release;
+}</string>
+                            </entry>
+                            <entry key="core/module.rell">
+                                <string>@mount("core")
+module;</string>
+                            </entry>
+                            <entry key="core/operations.rell">
+                                <string>operation create_module(name, pubkey) {
+  require(op_context.is_signer(pubkey));
+  create lib(name, pubkey);
+}
+
+// Expects data in format:
+// name = module_name:version (ex. ft3-lib:0.0.1)
+// dependencies = [ module_name:version, ... ] (ex. [ "ft3-lib:0.0.1" ])
+// data = zip file of the module
+operation publish_release(name, dependencies: list&lt;name&gt;, data: byte_array) {
+  log("Publishing", name);
+  log("Data", data.size());
+  val definitions = name.split(":");
+  
+  val lib = lib @ { .name == definitions[0] };
+  require(op_context.is_signer(lib.signer));
+  
+  log(definitions[0], "has data", data.to_hex());
+  
+  val depends_on_releases = list&lt;release&gt;();
+  for (dep in dependencies) {
+    val dep_definitions = dep.split(":");
+    depends_on_releases.add(release @ { .lib.name == dep_definitions[0], .version == dep_definitions[1] });
+  }
+  
+  val release = create release(lib, definitions[1], data);
+  
+  for (dep_release in depends_on_releases) {
+    create dependency(release, depends_on = dep_release);
+  }
+}</string>
+                            </entry>
+                            <entry key="core/queries.rell">
+                                <string>query download_module(name, version: name): text {
+  val data = release @ { .lib.name == name, version } ( .data );
+  return data.to_hex();
+}
+
+query get_dependencies_of_module(name, version: name) {
+  return dependency @* { .release == release @ { .lib.name == name, version }} (
+    name = .depends_on.lib.name,
+    version = .depends_on.version
+  );
+}</string>
+                            </entry>
+                            <entry key="main.rell">
+                                <string>import core;</string>
+                            </entry>
+                        </dict>
+                    </entry>
+                    <entry key="version">
+                        <string>0.10.4</string>
+                    </entry>
+                </dict>
+            </entry>
+        </dict>
+    </entry>
+    <entry key="signers">
+        <array>
+            <bytea>0350FE40766BC0CE8D08B3F5B810E49A8352FDD458606BD5FAFE5ACDCDC8FF3F57</bytea>
+        </array>
+    </entry>
+</dict>
