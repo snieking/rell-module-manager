@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import * as fs from 'fs';
+import * as readline from 'readline';
 import yargs from 'yargs';
 import { BlockchainClient } from 'simple-postchain';
 const archiver = require('archiver');
@@ -21,6 +22,9 @@ async function main() {
       rid: { type: 'string', demandOption: false, alias: 'r' },
       signer: { type: 'string', demandOption: false, alias: 's' },
     })
+    .command('init', 'Initializes a new project', () => {
+      init();
+    })
     .command('publish', 'Publish a new version of the module', (yargs) => {
       publish(yargs.argv);
     })
@@ -29,7 +33,26 @@ async function main() {
     })
     .command('install', 'Install modules defined in manifest', (yargs) => {
       install(yargs.argv);
+    })
+    .command('add', 'Install specific module', (yargs) => {
+      const args = yargs.positional('module', {
+        type: 'string',
+        demandOption: false,
+      });
+      addModule(args.argv);
     }).argv;
+}
+
+async function init() {
+  const manifest: any = {};
+  const appName = await askQuestion('App Name: ');
+  const version = await askQuestion('Version: ');
+
+  manifest.name = appName;
+  manifest.version = version;
+  manifest.dependencies = [];
+
+  await saveManifest(manifest, process.cwd());
 }
 
 async function create(args: any) {
@@ -81,6 +104,41 @@ async function publish(args: any) {
     .send();
 }
 
+async function addModule(args: any) {
+  let module: string = args._[1];
+  if (!module) {
+    console.log('No module to add specified');
+    process.exit(1);
+  }
+
+  requireBlockchain(args);
+  requireRid(args);
+
+  const directory = process.cwd();
+  const manifest = await loadManifest(directory);
+
+  if (!module.includes(':')) {
+    const client = BlockchainClient.initializeByBrid(args.blockchain, args.rid);
+    const version = await client
+      .query<string>()
+      .name('core.get_latest_version')
+      .addParameter('name', module)
+      .send();
+
+    module += `:${version}`;
+  }
+
+  if (manifest.dependencies) {
+    manifest.dependencies.push(module);
+    manifest.dependencies.sort((a: string, b: string) => b.localeCompare(a));
+  } else {
+    manifest.dependencies = [module];
+  }
+
+  await saveManifest(manifest, directory);
+  await install(args);
+}
+
 async function install(args: any) {
   requireBlockchain(args);
   requireRid(args);
@@ -121,9 +179,7 @@ async function ensureRellModulesDirectory(directory: string) {
 async function recreateDirectory(directory: string) {
   try {
     await fs.promises.rm(directory, { recursive: true });
-  } catch (error) {
-    console.log('Error deleting', error);
-  }
+  } catch (error) {}
 
   await fs.promises.mkdir(directory);
 }
@@ -203,6 +259,25 @@ async function loadManifest(directory: string) {
     console.log('Error loading manifest.json', error.message);
     process.exit(1);
   }
+}
+
+async function saveManifest(manifest: any, directory: string) {
+  const pretty = JSON.stringify(manifest, null, 2);
+  await fs.promises.writeFile(`${directory}/manifest.json`, pretty, ENCODING);
+}
+
+async function askQuestion(query: string) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) =>
+    rl.question(query, (ans) => {
+      rl.close();
+      resolve(ans);
+    })
+  );
 }
 
 main();

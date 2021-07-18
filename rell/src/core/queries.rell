@@ -3,6 +3,15 @@ query download_module(name, version: name): text {
   return data.to_hex();
 }
 
+query get_latest_version(name): name {
+  return (lib, release) @ {
+    lib.name == name,
+    release.lib == lib
+  } (
+    @sort_desc release.version
+  ) limit 1;
+}
+
 query get_dependencies_of_module(name, version: name) {
   return dependency @* { .release == release @ { .lib.name == name, version }} (
     name = .depends_on.lib.name,
