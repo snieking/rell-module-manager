@@ -75,7 +75,6 @@ async function create(args: any) {
   await client
     .transaction()
     .addOperation('core.create_module', manifest.name, keyPair.publicKey)
-    .sign(keyPair)
     .sign(client.createKeyPair(args.signer))
     .send();
 
