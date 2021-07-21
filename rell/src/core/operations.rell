@@ -1,5 +1,7 @@
 operation create_module(name, pubkey) {
   require(op_context.is_signer(pubkey));
+  require(op_context.is_signer(chain_context.args.admin_pubkey));
+
   create lib(name, pubkey);
 }
 

@@ -6,7 +6,11 @@
   <chains>
     <chain name="rell-module-manager" iid="0">
         <config height="0">
-          <app module=""> </app>
+          <app module="">
+            <args module="core">
+              <arg key="admin_pubkey"><string>02897FAC9964FBDF97E6B83ECCBDE4A8D28729E0FB27059487D1B6B29F70B48767</string></arg>
+            </args>
+          </app>
       </config>
     </chain>
   </chains>

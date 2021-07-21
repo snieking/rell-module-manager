@@ -1,2 +1,6 @@
 @mount("core")
 module;
+
+struct module_args {
+  admin_pubkey: pubkey;
+}

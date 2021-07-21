@@ -3,5 +3,6 @@ function test_able_to_create_lib() {
     .tx()
     .op(core.create_module("ft3-lib:0.0.1", alice_keypair().pub))
     .sign(alice_keypair())
+    .sign(admin_keypair())
     .run();
 }
