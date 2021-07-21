@@ -17,9 +17,15 @@ async function main() {
         type: 'string',
         demandOption: false,
         alias: 'bc',
-        default: 'http://localhost:7741',
+        default: 'https://n0.planevin.se:7751',
       },
-      rid: { type: 'string', demandOption: false, alias: 'r' },
+      rid: {
+        type: 'string',
+        demandOption: false,
+        alias: 'r',
+        default:
+          '80FE7DA87FD0C1034098A8C148BDE5E3BE653507E8D928C0F2CC2C66CCB4FF9C',
+      },
       signer: { type: 'string', demandOption: false, alias: 's' },
     })
     .command('init', 'Initializes a new project', () => {
@@ -58,6 +64,7 @@ async function init() {
 async function create(args: any) {
   requireBlockchain(args);
   requireRid(args);
+  requireSigner(args);
 
   const directory = process.cwd();
   const manifest = await loadManifest(directory);
@@ -69,6 +76,7 @@ async function create(args: any) {
     .transaction()
     .addOperation('core.create_module', manifest.name, keyPair.publicKey)
     .sign(keyPair)
+    .sign(client.createKeyPair(args.signer))
     .send();
 
   console.log(
@@ -128,7 +136,7 @@ async function addModule(args: any) {
     module += `:${version}`;
   }
 
-  if (manifest.dependencies) {
+  if (manifest.dependencies && manifest.dependencies.includes(module)) {
     manifest.dependencies.push(module);
     manifest.dependencies.sort((a: string, b: string) => b.localeCompare(a));
   } else {
