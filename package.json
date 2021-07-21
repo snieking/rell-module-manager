@@ -13,6 +13,9 @@
   "bin": {
     "rmm": "dist/index.js"
   },
+  "files": [
+    "dist/index.js"
+  ],
   "author": "",
   "license": "ISC",
   "devDependencies": {
