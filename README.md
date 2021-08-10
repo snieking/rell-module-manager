@@ -47,7 +47,7 @@ It is important that the name mathces with the directory that you are standing i
 
 Contact me on telegram @snieking and ask for a publishing key for your module.
 
-To create a release run `rmm publish --rid <RID> --signer <PRIVATE_KEY>`.
+To create a release run `rmm publish --signer <PRIVATE_KEY>`.
 
 ## Development
 
