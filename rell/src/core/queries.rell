@@ -1,3 +1,7 @@
+query get_module_hash(name, version: name) {
+  return release @ { .lib.name == name, version } ( .hash );
+}
+
 query download_module(name, version: name): text {
   val data = release @ { .lib.name == name, version } ( .data );
   return data.to_hex();

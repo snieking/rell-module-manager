@@ -9,6 +9,15 @@ const extract = require('extract-zip');
 
 const ENCODING = 'utf8';
 
+const log = console.log;
+
+let logEnabled = true;
+console.log = function (message) {
+  if (logEnabled) {
+    log(message);
+  }
+};
+
 async function main() {
   yargs
     .usage('Usage: $0 <command> [options]')
@@ -58,7 +67,10 @@ async function init() {
   manifest.version = version;
   manifest.dependencies = [];
 
-  await saveManifest(manifest, process.cwd());
+  const directory = process.cwd();
+  requireStandingInCorrectDirectory(directory, appName);
+
+  await saveManifest(manifest, directory);
 }
 
 async function create(args: any) {
@@ -67,8 +79,10 @@ async function create(args: any) {
   requireSigner(args);
 
   const directory = process.cwd();
+
   const manifest = await loadManifest(directory);
 
+  logEnabled = false;
   const client = BlockchainClient.initializeByBrid(args.blockchain, args.rid);
   const keyPair = client.createKeyPair();
 
@@ -77,8 +91,9 @@ async function create(args: any) {
     .addOperation('core.create_module', manifest.name, keyPair.publicKey)
     .sign(client.createKeyPair(args.signer))
     .send();
+  logEnabled = true;
 
-  console.log(
+  log(
     `Module ${
       manifest.name
     } created using private key: ${keyPair.privateKey.toString('hex')}`
@@ -91,30 +106,40 @@ async function publish(args: any) {
   requireSigner(args);
 
   const directory = process.cwd();
+
   const manifest = await loadManifest(directory);
 
-  console.log('Manifest: ', manifest);
   const buffer = await zipDir(directory, manifest);
-  console.log('Data: ', buffer.length);
 
+  logEnabled = false;
   const client = BlockchainClient.initializeByBrid(args.blockchain, args.rid);
 
-  await client
-    .transaction()
-    .addOperation(
-      'core.publish_release',
-      `${manifest.name}:${manifest.version}`,
-      manifest.dependencies,
-      buffer
-    )
-    .sign(client.createKeyPair(args.signer))
-    .send();
+  const moduleVersion = `${manifest.name}:${manifest.version}`;
+  try {
+    await client
+      .transaction()
+      .addOperation(
+        'core.publish_release',
+        moduleVersion,
+        manifest.dependencies,
+        buffer
+      )
+      .sign(client.createKeyPair(args.signer))
+      .send();
+  } catch (error) {
+    logEnabled = true;
+    log(`Error publishing module: ${error.message}`);
+    process.exit(1);
+  }
+  logEnabled = true;
+
+  log(`Successfully published ${moduleVersion}`);
 }
 
 async function addModule(args: any) {
   let module: string = args._[1];
   if (!module) {
-    console.log('No module to add specified');
+    log('No module to add specified');
     process.exit(1);
   }
 
@@ -124,26 +149,40 @@ async function addModule(args: any) {
   const directory = process.cwd();
   const manifest = await loadManifest(directory);
 
-  if (!module.includes(':')) {
-    const client = BlockchainClient.initializeByBrid(args.blockchain, args.rid);
-    const version = await client
-      .query<string>()
-      .name('core.get_latest_version')
-      .addParameter('name', module)
-      .send();
+  try {
+    if (!module.includes(':')) {
+      logEnabled = false;
+      const client = BlockchainClient.initializeByBrid(
+        args.blockchain,
+        args.rid
+      );
+      const version = await client
+        .query<string>()
+        .name('core.get_latest_version')
+        .addParameter('name', module)
+        .send();
+      logEnabled = true;
 
-    module += `:${version}`;
+      module += `:${version}`;
+    }
+
+    if (manifest.dependencies) {
+      manifest.dependencies = manifest.dependencies.filter(
+        (dep: string) => !dep.startsWith(`${args._[1]}:`)
+      );
+
+      manifest.dependencies.push(module);
+      manifest.dependencies.sort((a: string, b: string) => a.localeCompare(b));
+    } else {
+      manifest.dependencies = [module];
+    }
+
+    await saveManifest(manifest, directory);
+    await install(args);
+  } catch (error) {
+    logEnabled = true;
+    log(`Error adding module: ${error.message}`);
   }
-
-  if (manifest.dependencies && manifest.dependencies.includes(module)) {
-    manifest.dependencies.push(module);
-    manifest.dependencies.sort((a: string, b: string) => b.localeCompare(a));
-  } else {
-    manifest.dependencies = [module];
-  }
-
-  await saveManifest(manifest, directory);
-  await install(args);
 }
 
 async function install(args: any) {
@@ -151,6 +190,7 @@ async function install(args: any) {
   requireRid(args);
 
   const directory = process.cwd();
+
   const manifest = await loadManifest(directory);
 
   if (manifest.dependencies) {
@@ -159,19 +199,28 @@ async function install(args: any) {
 
     for (const dependency of manifest.dependencies) {
       const definitions = dependency.split(':');
-      const data = await client
-        .query<string>()
-        .name('core.download_module')
-        .addParameter('name', definitions[0])
-        .addParameter('version', definitions[1])
-        .send();
+      try {
+        logEnabled = false;
+        const data = await client
+          .query<string>()
+          .name('core.download_module')
+          .addParameter('name', definitions[0])
+          .addParameter('version', definitions[1])
+          .send();
+        logEnabled = true;
 
-      if (data) {
-        await unzipToDir(
-          `${directory}/rell_modules`,
-          definitions[0],
-          Buffer.from(data, 'hex')
-        );
+        if (data) {
+          await unzipToDir(
+            `${directory}/src/rell_modules`,
+            definitions[0],
+            Buffer.from(data, 'hex')
+          );
+
+          log(`Successfully installed ${definitions[0]}:${definitions[1]}`);
+        }
+      } catch (error) {
+        logEnabled = true;
+        log(`Error installing module ${definitions[0]}: ${error.message}`);
       }
     }
   }
@@ -179,7 +228,7 @@ async function install(args: any) {
 
 async function ensureRellModulesDirectory(directory: string) {
   try {
-    await fs.promises.mkdir(`${directory}/rell_modules`);
+    await fs.promises.mkdir(`${directory}/src/rell_modules`);
   } catch (error) {}
 }
 
@@ -193,21 +242,30 @@ async function recreateDirectory(directory: string) {
 
 function requireBlockchain(args: any) {
   if (!args.blockchain) {
-    console.error('Missing required argument: --blockchain');
+    log('Missing required argument: --blockchain');
     process.exit(1);
   }
 }
 
 function requireRid(args: any) {
   if (!args.rid) {
-    console.error('Missing required argument: --rid');
+    log('Missing required argument: --rid');
     process.exit(1);
   }
 }
 
 function requireSigner(args: any) {
   if (!args.signer) {
-    console.error('Missing required argument: --signer');
+    log('Missing required argument: --signer');
+    process.exit(1);
+  }
+}
+
+function requireStandingInCorrectDirectory(directory: string, appName: string) {
+  if (!directory.endsWith('rell') && !directory.endsWith(appName)) {
+    log(
+      `Standing in ${directory}, make sure you are standing in the rell directory`
+    );
     process.exit(1);
   }
 }
@@ -263,7 +321,7 @@ async function loadManifest(directory: string) {
 
     return JSON.parse(manifest);
   } catch (error) {
-    console.log('Error loading manifest.json', error.message);
+    log(`Error loading manifest.json: ${error.message}`);
     process.exit(1);
   }
 }
@@ -273,7 +331,7 @@ async function saveManifest(manifest: any, directory: string) {
   await fs.promises.writeFile(`${directory}/manifest.json`, pretty, ENCODING);
 }
 
-async function askQuestion(query: string) {
+async function askQuestion(query: string): Promise<string> {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,

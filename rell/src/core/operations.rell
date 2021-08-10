@@ -22,7 +22,7 @@ operation publish_release(name, dependencies: list<name>, data: byte_array) {
     depends_on_releases.add(release @ { .lib.name == dep_definitions[0], .version == dep_definitions[1] });
   }
   
-  val release = create release(lib, definitions[1], data);
+  val release = create release(lib, definitions[1], hash = data.sha256(), data);
   
   for (dep_release in depends_on_releases) {
     create dependency(release, depends_on = dep_release);

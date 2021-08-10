@@ -5,6 +5,7 @@ entity lib {
 
 entity release {
   key lib, version: name;
+  hash: byte_array;
   data: byte_array;
 }
 

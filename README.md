@@ -29,7 +29,7 @@ To create a release run `rmm publish --rid <RID> --signer <PRIVATE_KEY>`.
 
 ### Downloading libraries
 
-Libraries are defined in a `manifest.json` file located in `rell/src` directory. The tool looks inside that file to figure out which modules to download into `rell/src/rell_modules` directory.
+Libraries are defined in a `manifest.json` file located in the `rell` directory. The tool looks inside that file to figure out which modules to download into `rell/src/rell_modules` directory.
 
 Example of `manifest.json`.
 
