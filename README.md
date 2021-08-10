@@ -24,9 +24,9 @@ Example of `manifest.json`:
     "my-module:0.0.1
   ]
 }
+```
 
 If you don't have a manifest.json yet, then you can initialize one by running `rmm init`.
-```
 
 ## Publish a module
 To publish a library you need to declare a `manifest.json` in the module directory `rell/src/my_module/manifest.json`.
