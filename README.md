@@ -24,6 +24,8 @@ Example of `manifest.json`:
     "my-module:0.0.1
   ]
 }
+
+If you don't have a manifest.json yet, then you can initialize one by running `rmm init`.
 ```
 
 ## Publish a module
