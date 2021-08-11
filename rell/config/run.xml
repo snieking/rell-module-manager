@@ -1,7 +1,7 @@
 <run wipe-db="false">
   <nodes>
-    <config src="config/node-config.properties" add-signers="true" />
-    <test-config src="config/node-config.properties" />
+    <config src="node-config.properties" add-signers="true" />
+    <test-config src="node-config.properties" />
   </nodes>
   <chains>
     <chain name="rell-module-manager" iid="0">
